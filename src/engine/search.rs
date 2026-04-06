@@ -779,10 +779,12 @@ impl Worker {
                 // Moves late in the list are unlikely to beat alpha.
                 // Search them at reduced depth; re-search fully on surprise.
                 let reduction = if depth >= 2 && res.move_count >= 1 && mv.is_quiet() && !in_check {
-                    let r = searcher.cfg.lmr_table[depth as usize][res.move_count + 1] as i32;
+                    let mut r = searcher.cfg.lmr_table[depth as usize][res.move_count + 1] as i32;
                     let pt = self.pos.expect_piece_at(mv.from());
-                    let hist = self.history.score_quiet(self.pos.stm, pt, mv.to()); // ~13 Elo
-                    (r - hist / 8192).clamp(0, depth - 1)
+                    let hist = self.history.score_quiet(self.pos.stm, pt, mv.to());
+                    r += i32::from(!N::PV);
+                    r -= hist / 8192; // ~13 Elo
+                    r.clamp(0, depth - 1)
                 } else {
                     0
                 };
