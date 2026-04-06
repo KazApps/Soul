@@ -782,7 +782,7 @@ impl Worker {
                     let mut r = searcher.cfg.lmr_table[depth as usize][res.move_count + 1] as i32;
                     let pt = self.pos.expect_piece_at(mv.from());
                     let hist = self.history.score_quiet(self.pos.stm, pt, mv.to());
-                    r += i32::from(!N::PV);
+                    r -= i32::from(N::PV);
                     r -= hist / 8192; // ~13 Elo
                     r.clamp(0, depth - 1)
                 } else {
