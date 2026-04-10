@@ -91,8 +91,9 @@ pub struct CorrectionHistory {
 }
 
 pub const CORRECTION_SIZE: usize = 16384;
-pub const CORRECTION_SCALE: i32 = 256;
-pub const CORRECTION_LIMIT: i32 = 256 * 32;
+pub const CORRECTION_SCALE: i32 = 16;
+pub const CORRECTION_MAX_BONUS: i32 = 256;
+pub const CORRECTION_LIMIT: i32 = 1024;
 
 const _: () = assert!(CORRECTION_SIZE.is_power_of_two());
 
@@ -125,10 +126,8 @@ impl CorrectionHistory {
     #[inline(always)]
     pub fn update(&mut self, stm: Color, pawn_hash: u64, raw_diff: i32, depth: i32) {
         let entry = &mut self.data[Self::idx(stm, pawn_hash)];
-        let weight = (2 * (1 + depth)).min(16);
-        let scaled = raw_diff * CORRECTION_SCALE;
-        *entry =
-            ((*entry * (256 - weight) + scaled * weight) / 256).clamp(-CORRECTION_LIMIT, CORRECTION_LIMIT);
+        let bonus = (raw_diff * depth / 8).clamp(-CORRECTION_MAX_BONUS, CORRECTION_MAX_BONUS);
+        *entry = bonus - *entry * bonus.abs() / CORRECTION_LIMIT;
     }
 }
 
