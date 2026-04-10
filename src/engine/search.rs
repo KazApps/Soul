@@ -515,6 +515,13 @@ impl<'cfg> Searcher<'cfg> {
 }
 
 impl Worker {
+    #[inline(always)]
+    fn apply_static_correction(&self, raw_eval: i32) -> i32 {
+        let correction =
+            self.history.correction(self.pos.stm, self.pos.pawn_hash) / history::CORRECTION_SCALE;
+        (raw_eval + correction).clamp(-MATE_BOUND, MATE_BOUND)
+    }
+
     /// Negamax with alpha-beta pruning. Since chess is zero-sum, we maximize the
     /// score from the current side's perspective at every node, negating the score
     /// as it returns up the tree.
@@ -553,7 +560,7 @@ impl Worker {
             return self.qsearch::<N>(searcher, alpha, beta, ply);
         }
         if ply >= MAX_PLY {
-            return Ok(evaluate(&self.pos, &self.accumulator));
+            return Ok(self.apply_static_correction(evaluate(&self.pos, &self.accumulator)));
         }
 
         let alpha_orig = alpha;
@@ -615,9 +622,7 @@ impl Worker {
         let static_eval = if in_check {
             tt::SCORE_NONE
         } else {
-            let correction =
-                self.history.correction(self.pos.stm, self.pos.pawn_hash) / history::CORRECTION_SCALE;
-            (raw_static_eval + correction).clamp(-MATE_BOUND, MATE_BOUND)
+            self.apply_static_correction(raw_static_eval)
         };
         self.stack[ply].static_eval = static_eval;
 
@@ -1158,7 +1163,7 @@ impl Worker {
         let mut best_eval = if in_check {
             -INF
         } else {
-            let eval = evaluate(&self.pos, &self.accumulator);
+            let eval = self.apply_static_correction(evaluate(&self.pos, &self.accumulator));
             if eval >= beta {
                 return Ok(eval);
             }
